@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 
-export default function ShioriUltimateExplorer() {
-  // --- 1. ステート定義 ---
+export default function ShioriNetlifyExplorer() {
   const [bookmarks, setBookmarks] = useState([]);
   const [folders, setFolders] = useState(["未分類", "仕事", "プロジェクト", "プライベート"]);
   const [expandedFolders, setExpandedFolders] = useState(["すべて"]);
@@ -20,9 +19,7 @@ export default function ShioriUltimateExplorer() {
   const [editingBookmark, setEditingBookmark] = useState(null);
   const [gridCols, setGridCols] = useState(6);
   const [sortType, setSortType] = useState("date");
-  const suggestRef = useRef(null);
 
-  // --- 2. 永続化 ---
   useEffect(() => {
     const savedB = localStorage.getItem("shiori-data");
     const savedF = localStorage.getItem("shiori-folders");
@@ -35,7 +32,6 @@ export default function ShioriUltimateExplorer() {
     localStorage.setItem("shiori-folders", JSON.stringify(folders));
   }, [bookmarks, folders]);
 
-  // --- 3. ロジック ---
   const filteredAndSortedBookmarks = useMemo(() => {
     let result = bookmarks.filter(bm => {
       const folderMatch = selectedFolder === "すべて" || bm.folder === selectedFolder || bm.folder.startsWith(selectedFolder + "/");
@@ -62,25 +58,6 @@ export default function ShioriUltimateExplorer() {
     setContextMenu(null);
   };
 
-  const handleDropOnFolder = (e, targetPath) => {
-    e.preventDefault();
-    const type = e.dataTransfer.getData("dragType");
-    const source = e.dataTransfer.getData("dragValue");
-    if (type === "folder-sort" && source !== targetPath) {
-      const sP = source.includes("/") ? source.substring(0, source.lastIndexOf("/")) : "";
-      const tP = targetPath.includes("/") ? targetPath.substring(0, targetPath.lastIndexOf("/")) : "";
-      if (sP !== tP) return;
-      const moving = folders.filter(f => f === source || f.startsWith(source + "/"));
-      const rest = folders.filter(f => !moving.includes(f));
-      const idx = rest.indexOf(targetPath);
-      const newList = [...rest];
-      newList.splice(idx, 0, ...moving);
-      setFolders(newList);
-    } else if (type === "bookmark-move") {
-      setBookmarks(prev => prev.map(bm => bm.id === parseInt(source) ? { ...bm, folder: targetPath } : bm));
-    }
-  };
-
   const handleAddBookmark = async (e) => {
     e.preventDefault();
     if (!url || isFetching) return;
@@ -100,18 +77,15 @@ export default function ShioriUltimateExplorer() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans antialiased" 
-         onClick={() => { setContextMenu(null); setShowSuggest(false); }}>
-      
-      {/* サイドバー */}
-      <aside className="w-64 border-r bg-white flex flex-col shrink-0 shadow-xl z-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans antialiased" onClick={() => { setContextMenu(null); setShowSuggest(false); }}>
+      <aside className="w-64 border-r bg-white flex flex-col shrink-0 shadow-xl z-50 text-left">
         <div className="p-6 border-b flex justify-between items-center bg-slate-50/30">
-          <h1 className="text-xl font-black text-indigo-600 tracking-tighter cursor-pointer" onClick={() => setSelectedFolder("すべて")}>SHIORI</h1>
-          <button onClick={(e) => { e.stopPropagation(); const n = prompt("新しいトップフォルダ名を入力してください。"); if(n && !folders.includes(n)) setFolders([...folders, n]); }} className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white">
+          <h1 className="text-xl font-black text-indigo-600 tracking-tighter" onClick={() => setSelectedFolder("すべて")}>SHIORI</h1>
+          <button onClick={(e) => { e.stopPropagation(); const n = prompt("新しいフォルダ名を入力してください。"); if(n && !folders.includes(n)) setFolders([...folders, n]); }} className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-0.5 text-left">
+        <div className="flex-1 overflow-y-auto p-4 space-y-0.5">
           <div onClick={() => setSelectedFolder("すべて")} className={`px-4 py-2 rounded-xl cursor-pointer text-xs font-black uppercase tracking-widest ${selectedFolder === "すべて" ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:bg-slate-50"}`}>すべてのブックマーク</div>
           <div className="mt-8 px-4 mb-3 text-[10px] font-black text-slate-300 uppercase">フォルダ一覧</div>
           {folders.map(f => {
@@ -119,7 +93,7 @@ export default function ShioriUltimateExplorer() {
             const isHidden = f.split("/").slice(0, -1).some(p => !expandedFolders.includes(f.substring(0, f.indexOf(p) + p.length)));
             if (isHidden) return null;
             return (
-              <div key={f} draggable onDragStart={e => { e.dataTransfer.setData("dragType", "folder-sort"); e.dataTransfer.setData("dragValue", f); }} onDragOver={e => e.preventDefault()} onDrop={e => handleDropOnFolder(e, f)} onClick={() => setSelectedFolder(f)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({x: e.pageX, y: e.pageY, item: f, type: 'folder'}); }}
+              <div key={f} onClick={() => setSelectedFolder(f)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({x: e.pageX, y: e.pageY, item: f, type: 'folder'}); }}
                    className={`px-4 py-2.5 rounded-xl cursor-pointer text-sm flex items-center gap-3 transition-all ${selectedFolder === f ? "bg-indigo-50 text-indigo-600 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
                    style={{ marginLeft: `${level * 1.2}rem`, borderLeft: level > 0 ? '1px solid #e2e8f0' : 'none' }}>
                 <span onClick={e => { e.stopPropagation(); setExpandedFolders(p => p.includes(f) ? p.filter(x => x !== f) : [...p, f]); }} className="opacity-40 font-mono text-[10px] cursor-pointer">{folders.some(c => c.startsWith(f + "/")) ? (expandedFolders.includes(f) ? "▼" : "▶") : (level > 0 ? "└" : "📁")}</span>
@@ -130,11 +104,10 @@ export default function ShioriUltimateExplorer() {
         </div>
       </aside>
 
-      {/* メインエリア */}
       <div className="flex-1 flex flex-col min-w-0 bg-white relative">
         <div className="sticky top-0 z-40 bg-white/70 backdrop-blur-2xl border-b">
           <header className="h-16 px-8 flex items-center justify-between">
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedFolder.replace(/\//g, " / ")} ／ {filteredAndSortedBookmarks.length}件</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedFolder.replace(/\//g, " ／ ")} ／ {filteredAndSortedBookmarks.length}件</div>
             <div className="flex gap-6 items-center">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black text-slate-400 tracking-tighter">表示サイズ</span>
@@ -155,15 +128,15 @@ export default function ShioriUltimateExplorer() {
             <div className="px-8 pb-6 pt-2">
               <form onSubmit={handleAddBookmark} className="max-w-5xl mx-auto flex flex-col gap-3 bg-white/80 p-5 rounded-[2.5rem] shadow-xl border border-white backdrop-blur-md">
                 <input type="url" placeholder="保存したいURLをここに貼り付け" value={url} onChange={e => setUrl(e.target.value)} className="w-full p-2 border-b-2 border-slate-50 text-sm outline-none focus:border-indigo-400" required disabled={isFetching} />
-                <div className="flex gap-4 relative">
+                <div className="flex gap-4 relative text-left">
                   <input type="text" placeholder="メモ（任意）" value={memo} onChange={e => setMemo(e.target.value)} className="flex-1 p-2 text-xs border-b border-slate-50 outline-none" disabled={isFetching} />
                   <input type="text" placeholder="#タグ" value={tags} onChange={e => setTags(e.target.value)} className="w-48 p-2 text-xs border-b border-slate-50 outline-none" disabled={isFetching} />
-                  <div className="relative w-48" onClick={e => e.stopPropagation()}>
+                  <div className="relative w-48">
                     <input type="text" placeholder="保存先を選択..." value={targetFolder} onFocus={() => setShowSuggest(true)} onChange={e => setTargetFolder(e.target.value)} className="w-full p-2 text-xs border-b border-slate-50 outline-none font-bold cursor-pointer" />
                     {showSuggest && (
                       <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-2xl p-1 z-[100] max-h-60 overflow-y-auto border text-left">
                         {folders.filter(f => f.toLowerCase().includes(targetFolder.toLowerCase())).map(f => (
-                          <div key={f} onClick={() => {setTargetFolder(f); setShowSuggest(false);}} className="p-2.5 text-[10px] font-bold text-slate-600 hover:bg-indigo-50 cursor-pointer rounded-lg text-left">📁 {f}</div>
+                          <div key={f} onClick={() => {setTargetFolder(f); setShowSuggest(false);}} className="p-2.5 text-[10px] font-bold text-slate-600 hover:bg-indigo-50 cursor-pointer rounded-lg">📁 {f}</div>
                         ))}
                       </div>
                     )}
@@ -175,8 +148,8 @@ export default function ShioriUltimateExplorer() {
           ) : (
             <div className="px-8 py-6 bg-indigo-50/80 backdrop-blur-md flex justify-center gap-6 animate-in slide-in-from-top">
               <span className="text-xs font-black text-indigo-600 self-center uppercase">{selectedIds.length}件を選択中</span>
-              <button onClick={() => {const d = prompt("移動先のフォルダ名を入力してください。"); if(d && folders.includes(d)) {setBookmarks(bs=>bs.map(b=>selectedIds.includes(b.id)?{...b, folder:d}:b)); setSelectedIds([]); setIsEditMode(false);}}} className="bg-white border px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm hover:bg-indigo-50">一括フォルダ移動</button>
-              <button onClick={() => {if(confirm("選択したアイテムをすべて削除してもよろしいですか？")) {setBookmarks(bs=>bs.filter(b=>!selectedIds.includes(b.id))); setSelectedIds([]); setIsEditMode(false);}}} className="bg-red-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-red-600">一括削除</button>
+              <button onClick={() => {const d = prompt("移動先のフォルダ名を入力してください。"); if(d && folders.includes(d)) {setBookmarks(bs=>bs.map(b=>selectedIds.includes(b.id)?{...b, folder:d}:b)); setSelectedIds([]); setIsEditMode(false);}}} className="bg-white border px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm">移動</button>
+              <button onClick={() => {if(confirm("削除しますか？")) {setBookmarks(bs=>bs.filter(b=>!selectedIds.includes(b.id))); setSelectedIds([]); setIsEditMode(false);}}} className="bg-red-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg">削除</button>
             </div>
           )}
         </div>
@@ -184,29 +157,19 @@ export default function ShioriUltimateExplorer() {
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           <div className="grid gap-8" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
             {filteredAndSortedBookmarks.map((bm) => (
-              <div key={bm.id} 
-                   onClick={() => isEditMode && (selectedIds.includes(bm.id) ? setSelectedIds(selectedIds.filter(i => i !== bm.id)) : setSelectedIds([...selectedIds, bm.id]))} 
-                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({x: e.pageX, y: e.pageY, item: bm, type: 'bookmark'}); }}
+              <div key={bm.id} onClick={() => isEditMode && (selectedIds.includes(bm.id) ? setSelectedIds(selectedIds.filter(i => i !== bm.id)) : setSelectedIds([...selectedIds, bm.id]))} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({x: e.pageX, y: e.pageY, item: bm, type: 'bookmark'}); }}
                    className={`group bg-white rounded-[2.2rem] p-5 shadow-sm hover:shadow-2xl transition-all relative border-2 ${isEditMode && selectedIds.includes(bm.id) ? "border-indigo-600 scale-95" : "border-transparent"}`}>
                 <div className="aspect-video rounded-2xl overflow-hidden bg-slate-100 mb-4 border border-slate-50 shadow-inner">
                   {bm.ogImage ? <img src={bm.ogImage} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-200 font-black tracking-widest uppercase">No Image</div>}
                 </div>
-                
                 <h3 className="text-[12px] font-bold text-slate-800 line-clamp-2 h-9 mb-1 tracking-tight text-left leading-tight">{bm.title}</h3>
-                
-                {bm.memo && (
-                  <p className="text-[10px] text-slate-400 line-clamp-1 mb-2 italic text-left">"{bm.memo}"</p>
-                )}
-                
+                {bm.memo && <p className="text-[10px] text-slate-400 line-clamp-1 mb-2 italic text-left">"{bm.memo}"</p>}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {bm.tags?.map(t => <span key={t} className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2.5 py-0.5 rounded-full tracking-tighter">#{t}</span>)}
                 </div>
-
-                <div className="mt-auto pt-2 border-t border-slate-50 flex justify-between items-center">
+                <div className="mt-auto pt-2 border-t border-slate-50 flex justify-between items-center text-left">
                   <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{bm.folder.split("/").pop()}</span>
-                  <span className="text-[7px] text-slate-200 font-bold">{bm.date}</span>
                 </div>
-
                 {!isEditMode && <a href={bm.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0"></a>}
               </div>
             ))}
@@ -214,53 +177,41 @@ export default function ShioriUltimateExplorer() {
         </main>
       </div>
 
-      {/* 右クリックメニュー */}
       {contextMenu && (
-        <div className="fixed z-[100] bg-white shadow-2xl border border-slate-100 rounded-2xl overflow-hidden py-1 w-48 text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in-95" 
-             style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
+        <div className="fixed z-[100] bg-white shadow-2xl border border-slate-100 rounded-2xl overflow-hidden py-1 w-48 text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in-95" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
           {contextMenu.type === 'bookmark' ? (
             <>
-              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer transition-colors" onClick={() => { navigator.clipboard.writeText(contextMenu.item.url); setContextMenu(null); }}>リンクをコピー</div>
-              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer transition-colors" onClick={() => { setEditingBookmark(contextMenu.item); setContextMenu(null); }}>情報を編集</div>
-              <div className="px-5 py-3 hover:bg-red-50 text-red-500 cursor-pointer border-t" onClick={() => { if(confirm("このブックマークを削除してもよろしいですか？")) setBookmarks(bs=>bs.filter(b=>b.id!==contextMenu.item.id)); setContextMenu(null); }}>削除</div>
+              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer" onClick={() => { navigator.clipboard.writeText(contextMenu.item.url); setContextMenu(null); }}>リンクをコピー</div>
+              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer" onClick={() => { setEditingBookmark(contextMenu.item); setContextMenu(null); }}>情報を編集</div>
+              <div className="px-5 py-3 hover:bg-red-50 text-red-500 cursor-pointer border-t" onClick={() => { if(confirm("削除しますか？")) setBookmarks(bs=>bs.filter(b=>b.id!==contextMenu.item.id)); setContextMenu(null); }}>削除</div>
             </>
           ) : (
             <>
-              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer transition-colors" onClick={() => {const n=prompt("新しいフォルダ名を入力してください。", contextMenu.item.split("/").pop()); if(n) { const p=contextMenu.item.substring(0, contextMenu.item.lastIndexOf("/")); const nP=p?`${p}/${n.trim()}`:n.trim(); setFolders(fs=>fs.map(f=>f===contextMenu.item?nP:f)); setBookmarks(bs=>bs.map(b=>b.folder===contextMenu.item?{...b, folder:nP}:b)); } setContextMenu(null);}}>名前を変更</div>
-              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer text-indigo-600" onClick={() => addChildFolder(contextMenu.item)}>子フォルダを作成</div>
-              
+              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer" onClick={() => {const n=prompt("名前変更?", contextMenu.item.split("/").pop()); if(n) { const p=contextMenu.item.substring(0, contextMenu.item.lastIndexOf("/")); const nP=p?`${p}/${n.trim()}`:n.trim(); setFolders(fs=>fs.map(f=>f===contextMenu.item?nP:f)); setBookmarks(bs=>bs.map(b=>b.folder===contextMenu.item?{...b, folder:nP}:b)); } setContextMenu(null);}}>名前変更</div>
+              <div className="px-5 py-3 hover:bg-indigo-50 cursor-pointer text-indigo-600" onClick={() => addChildFolder(contextMenu.item)}>子フォルダ作成</div>
               {contextMenu.item !== "未分類" && (
-                <div className="px-5 py-3 hover:bg-red-50 text-red-500 cursor-pointer border-t" onClick={() => { if(confirm("このフォルダおよび配下の全フォルダを削除してもよろしいですか？")) setFolders(fs=>fs.filter(f=>f!==contextMenu.item && !f.startsWith(contextMenu.item+"/"))); setContextMenu(null); }}>削除</div>
+                <div className="px-5 py-3 hover:bg-red-50 text-red-500 cursor-pointer border-t" onClick={() => { if(confirm("フォルダを削除しますか？")) setFolders(fs=>fs.filter(f=>f!==contextMenu.item && !f.startsWith(contextMenu.item+"/"))); setContextMenu(null); }}>削除</div>
               )}
             </>
           )}
         </div>
       )}
 
-      {/* 編集モーダル */}
       {editingBookmark && (
         <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setEditingBookmark(null)}>
           <div className="bg-white w-full max-w-lg rounded-[3rem] p-10 shadow-2xl border border-white/20 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-            <h2 className="font-black mb-8 text-2xl tracking-tighter flex items-center gap-3">✏️ ブックマークを編集</h2>
+            <h2 className="font-black mb-8 text-2xl tracking-tighter flex items-center gap-3">✏️ 編集</h2>
             <div className="space-y-6 text-[10px] font-black text-slate-400 uppercase text-left">
-              <div>URL
-                <input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-sm font-medium" value={editingBookmark.url} onChange={e => setEditingBookmark({...editingBookmark, url: e.target.value})} />
-              </div>
-              <div>タイトル
-                <input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-sm font-medium" value={editingBookmark.title} onChange={e => setEditingBookmark({...editingBookmark, title: e.target.value})} />
-              </div>
+              <div>URL<input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-sm font-medium" value={editingBookmark.url} onChange={e => setEditingBookmark({...editingBookmark, url: e.target.value})} /></div>
+              <div>タイトル<input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-sm font-medium" value={editingBookmark.title} onChange={e => setEditingBookmark({...editingBookmark, title: e.target.value})} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div>メモ
-                  <input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-xs font-medium" value={editingBookmark.memo} onChange={e => setEditingBookmark({...editingBookmark, memo: e.target.value})} />
-                </div>
-                <div>タグ（カンマ区切り）
-                  <input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-xs font-medium" value={editingBookmark.tags?.join(", ")} onChange={e => setEditingBookmark({...editingBookmark, tags: e.target.value.split(",").map(t => t.trim())})} />
-                </div>
+                <div>メモ<input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-xs font-medium" value={editingBookmark.memo} onChange={e => setEditingBookmark({...editingBookmark, memo: e.target.value})} /></div>
+                <div>タグ<input className="w-full mt-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 ring-indigo-100 text-xs font-medium" value={editingBookmark.tags?.join(", ")} onChange={e => setEditingBookmark({...editingBookmark, tags: e.target.value.split(",").map(t => t.trim())})} /></div>
               </div>
             </div>
             <div className="flex gap-4 mt-10">
               <button className="flex-1 py-4 text-[10px] font-black uppercase border rounded-2xl hover:bg-slate-50 transition-all" onClick={() => setEditingBookmark(null)}>キャンセル</button>
-              <button className="flex-1 py-4 text-[10px] font-black uppercase bg-indigo-600 text-white rounded-2xl shadow-xl hover:bg-indigo-700 transition-all" onClick={() => { setBookmarks(bs => bs.map(b => b.id === editingBookmark.id ? editingBookmark : b)); setEditingBookmark(null); }}>変更を保存</button>
+              <button className="flex-1 py-4 text-[10px] font-black uppercase bg-indigo-600 text-white rounded-2xl shadow-xl transition-all" onClick={() => { setBookmarks(bs => bs.map(b => b.id === editingBookmark.id ? editingBookmark : b)); setEditingBookmark(null); }}>保存</button>
             </div>
           </div>
         </div>
